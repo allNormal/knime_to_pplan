@@ -53,32 +53,45 @@ public class Transformer {
     this.hasOutputVar = model.getObjectProperty("http://purl.org/net/p-plan#hasOutputVar");
     this.isPreceededBy = model.getObjectProperty("http://purl.org/net/p-plan#isPrecededBy");
   }
-
   public void knimeToPplan() {
     JSONArray nodes = jsonObject.getJSONObject("workflow").getJSONArray("nodes");
     for (int i = 0; i < nodes.length(); i++) {
       JSONObject node = nodes.getJSONObject(i);
-      if (node.getString("name").equals("Variable")
-              && node.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
+      if (node.getString("name").equals("Variable") &&
+              node.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
+        processVariableNode(node);
+      } else if (node.getString("name").equals("Step") &&
+              node.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
+        processStepNode(node);
+      } else if (node.getString("type").equals("Subnode")) {
+        processSubnode(node);
+      }
+    }
+  }
+
+  private void processSubnode(JSONObject node) {
+    JSONObject subWorkflow = node.getJSONObject("subWorkflow");
+    JSONArray subNodes = subWorkflow.getJSONArray("nodes");
+    for (int j = 0; j < subNodes.length(); j++) {
+      JSONObject subNode = subNodes.getJSONObject(j);
+      if (subNode.getString("name").equals("Variable") &&
+              subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
         String label = node.getString("annotation");
-        Individual Ivariable;
-        if(model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label) == null) {
-          Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
-        } else {
+        Individual Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+        if (Ivariable == null) {
           Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
         }
         model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
         OntClass variableNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
         entity.addSubClass(variableNew);
         setOutput(node, Ivariable);
-      } else if (node.getString("name").equals("Step")
-              && node.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
+        setInput(node, Ivariable);
+      } else if (subNode.getString("name").equals("Step") &&
+              subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
         String label = node.getString("annotation");
-        Individual Istep;
-        if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label) == null) {
+        Individual Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
+        if (Istep == null) {
           Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
-        } else {
-          Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
         }
         model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
         OntClass stepNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
@@ -86,17 +99,36 @@ public class Transformer {
         Individual receive = receiving.createIndividual("https://w3id.org/semsys/plan/ns/audit/receiving#" + label);
         receive.addProperty(type, "JSON");
         setInput(node, Istep);
+
       }
     }
   }
-
-  public void save() {
-    try {
-      OutputStream out = new FileOutputStream("src/main/resources/output.ttl");
-      model.write(out, "TURTLE");
-    } catch (FileNotFoundException e) {
-      throw new RuntimeException(e);
+  private void processVariableNode(JSONObject node) {
+    String label = node.getString("annotation");
+    Individual Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+    if (Ivariable == null) {
+      Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
     }
+    model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+    OntClass variableNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+    entity.addSubClass(variableNew);
+    setOutput(node, Ivariable);
+    setInput(node, Ivariable);
+  }
+
+  private void processStepNode(JSONObject node) {
+    String label = node.getString("annotation");
+    Individual Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
+    if (Istep == null) {
+      Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
+    }
+    model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+    OntClass stepNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+    activity.addSubClass(stepNew);
+    Individual receive = receiving.createIndividual("https://w3id.org/semsys/plan/ns/audit/receiving#" + label);
+    receive.addProperty(type, "JSON");
+    setInput(node, Istep);
+
   }
 
   private void setOutput(JSONObject node, Individual individual) {
@@ -113,7 +145,6 @@ public class Transformer {
             if (node1.getString("id").equals(successor.getString("id"))) {
               if (node1.getString("name").equals("Variable")
                       && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
-
               } else if (node1.getString("name").equals("Step")
                       && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
                 String label = node1.getString("annotation");
@@ -125,6 +156,27 @@ public class Transformer {
                   Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
                 }
                 Istep.addProperty(this.hasInputVar, individual);
+              } else if (node1.getString("type").equals("Subnode")) {
+                JSONObject subWorkflow = node1.getJSONObject("subWorkflow");
+                JSONArray subNodes = subWorkflow.getJSONArray("nodes");
+                for (int d = 0; d < subNodes.length(); d++) {
+                  JSONObject subNode = subNodes.getJSONObject(d);
+                  if (subNode.getString("name").equals("Variable") &&
+                          subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
+
+                  } else if (subNode.getString("name").equals("Step") &&
+                          subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
+                    String label = node1.getString("annotation");
+
+                    Individual Istep;
+                    if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
+                      Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                    } else {
+                      Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                    }
+                    Istep.addProperty(this.hasInputVar, individual);
+                  }
+                }
               }
             }
           }
@@ -165,7 +217,34 @@ public class Transformer {
                   Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
                 }
                 individual.addProperty(this.isPreceededBy, Istep);
+              } else if (node1.getString("type").equals("Subnode")) {
+                JSONObject subWorkflow = node1.getJSONObject("subWorkflow");
+                JSONArray subNodes = subWorkflow.getJSONArray("nodes");
+                for (int d = 0; d < subNodes.length(); d++) {
+                  JSONObject subNode = subNodes.getJSONObject(d);
+                  if (subNode.getString("name").equals("Variable") &&
+                          subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
+                    String label = node1.getString("annotation");
+                    Individual Ivariable = null;
+                    if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label) == null) {
+                      Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+                    } else {
+                      Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+                    }
+                    individual.addProperty(this.hasOutputVar, Ivariable);
 
+                  } else if (subNode.getString("name").equals("Step") &&
+                          subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
+                    Individual Istep = null;
+                    String label = node1.getString("annotation");
+                    if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
+                      Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                    } else {
+                      Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                    }
+                    individual.addProperty(this.isPreceededBy, Istep);
+                  }
+                }
               }
             }
           }
@@ -173,5 +252,33 @@ public class Transformer {
       }
     }
   }
+
+
+
+  private JSONObject findNodeById(String nodeId, JSONArray nodes) {
+    for (int i = 0; i < nodes.length(); i++) {
+      JSONObject node = nodes.getJSONObject(i);
+      if (node.getString("id").equals(nodeId)) {
+        return node;
+      }
+    }
+    return null;
+  }
+
+  private JSONObject findNodeById(String nodeId) {
+    JSONArray nodes = jsonObject.getJSONObject("workflow").getJSONArray("nodes");
+    return findNodeById(nodeId, nodes);
+  }
+
+  public void save() {
+    try {
+      OutputStream out = new FileOutputStream("src/main/resources/output.ttl");
+      model.write(out, "TURTLE");
+    } catch (FileNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+
 
 }
