@@ -8,7 +8,7 @@ public class Test {
   public static void main(String[] args) {
     String content = null;
     try {
-      content = new String(Files.readAllBytes(Paths.get("C:\\Users\\gktop\\Desktop\\work\\github\\knime_to_pplan\\src\\main\\resources\\new_test1.json"))).trim();
+      content = new String(Files.readAllBytes(Paths.get("src/main/resources/test1.json"))).trim();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

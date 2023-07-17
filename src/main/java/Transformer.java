@@ -57,19 +57,20 @@ public class Transformer {
     JSONArray nodes = jsonObject.getJSONObject("workflow").getJSONArray("nodes");
     for (int i = 0; i < nodes.length(); i++) {
       JSONObject node = nodes.getJSONObject(i);
-      if (node.getString("name").equals("Variable") &&
+      if (node.getString("type").equals("Subnode")) {
+        processSubnode(node);
+      } else if (node.getString("name").equals("Variable") &&
               node.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
         processVariableNode(node);
       } else if (node.getString("name").equals("Step") &&
               node.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
         processStepNode(node);
-      } else if (node.getString("type").equals("Subnode")) {
-        processSubnode(node);
       }
     }
   }
 
   private void processSubnode(JSONObject node) {
+    System.out.println("subnode");
     JSONObject subWorkflow = node.getJSONObject("subWorkflow");
     JSONArray subNodes = subWorkflow.getJSONArray("nodes");
     for (int j = 0; j < subNodes.length(); j++) {
@@ -104,7 +105,9 @@ public class Transformer {
     }
   }
   private void processVariableNode(JSONObject node) {
+    System.out.println("variable");
     String label = node.getString("annotation");
+    System.out.println(label);
     Individual Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
     if (Ivariable == null) {
       Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
@@ -117,6 +120,7 @@ public class Transformer {
   }
 
   private void processStepNode(JSONObject node) {
+    System.out.println("step");
     String label = node.getString("annotation");
     Individual Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
     if (Istep == null) {
@@ -145,17 +149,6 @@ public class Transformer {
             if (node1.getString("id").equals(successor.getString("id"))) {
               if (node1.getString("name").equals("Variable")
                       && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
-              } else if (node1.getString("name").equals("Step")
-                      && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
-                String label = node1.getString("annotation");
-
-                Individual Istep;
-                if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
-                  Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                } else {
-                  Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                }
-                Istep.addProperty(this.hasInputVar, individual);
               } else if (node1.getString("type").equals("Subnode")) {
                 JSONObject subWorkflow = node1.getJSONObject("subWorkflow");
                 JSONArray subNodes = subWorkflow.getJSONArray("nodes");
@@ -177,6 +170,17 @@ public class Transformer {
                     Istep.addProperty(this.hasInputVar, individual);
                   }
                 }
+              } else if (node1.getString("name").equals("Step")
+                      && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
+                String label = node1.getString("annotation");
+
+                Individual Istep;
+                if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
+                  Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                } else {
+                  Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                }
+                Istep.addProperty(this.hasInputVar, individual);
               }
             }
           }
@@ -207,16 +211,6 @@ public class Transformer {
                   Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
                 }
                 individual.addProperty(this.hasOutputVar, Ivariable);
-              } else if (node1.getString("name").equals("Step")
-                      && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
-                Individual Istep = null;
-                String label = node1.getString("annotation");
-                if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
-                  Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                } else {
-                  Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                }
-                individual.addProperty(this.isPreceededBy, Istep);
               } else if (node1.getString("type").equals("Subnode")) {
                 JSONObject subWorkflow = node1.getJSONObject("subWorkflow");
                 JSONArray subNodes = subWorkflow.getJSONArray("nodes");
@@ -242,8 +236,22 @@ public class Transformer {
                     } else {
                       Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
                     }
-                    individual.addProperty(this.isPreceededBy, Istep);
+                    if (individual.getOntClass().equals(step)) {
+                      individual.addProperty(this.isPreceededBy, Istep);
+                    }
                   }
+                }
+              } else if (node1.getString("name").equals("Step")
+                      && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
+                Individual Istep = null;
+                String label = node1.getString("annotation");
+                if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
+                  Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                } else {
+                  Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                }
+                if (individual.getOntClass().equals(step)) {
+                  individual.addProperty(this.isPreceededBy, Istep);
                 }
               }
             }
