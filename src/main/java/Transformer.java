@@ -20,6 +20,7 @@ public class Transformer {
   private JSONObject jsonObject;
   private Map<String, String> output = new HashMap<>();
   private OntModel model = ModelFactory.createOntologyModel(OWL_MEM);
+  private final Namespace NAMESPACE = new Namespace();
 
   OntClass entity;
   OntClass activity;
@@ -49,20 +50,20 @@ public class Transformer {
 
     RDFDataMgr.read(model, temp, Lang.TURTLE);
 
-    this.entity = model.getOntClass("https://w3id.org/ep-plan#Entity");
-    this.activity = model.getOntClass("https://w3id.org/ep-plan#Activity");
-    this.step = model.getOntClass("http://purl.org/net/p-plan#Step");
-    this.variable = model.getOntClass("http://purl.org/net/p-plan#Variable");
-    this.receiving = model.getOntClass("http://w3id.org/wellfort/prov#Receiving");
-    this.plan = model.getOntClass("http://www.w3.org/ns/prov#Plan");
-    this.type = model.getDatatypeProperty("http://w3id.org/wellfort/prov#type");
-    this.system = model.getOntClass("http://w3id.org/wellfort/prov#extension:System");
-    this.hasInputVar = model.getObjectProperty("http://purl.org/net/p-plan#hasInputVar");
-    this.hasOutputVar = model.getObjectProperty("http://purl.org/net/p-plan#hasOutputVar");
-    this.isPreceededBy = model.getObjectProperty("http://purl.org/net/p-plan#isPrecededBy");
-    this.includesPlanElement = model.getObjectProperty("https://w3id.org/ep-plan#includesPlanElement");
-    this.hasServiceGenerator = model.getObjectProperty("http://w3id.org/wellfort/prov#hasServiceGenerator");
-    this.hasPlan = model.getObjectProperty("http://w3id.org/wellfort/prov#hasPlan");
+    this.entity = model.getOntClass(NAMESPACE.ENTITY);
+    this.activity = model.getOntClass(NAMESPACE.ACTIVITY);
+    this.step = model.getOntClass(NAMESPACE.STEP);
+    this.variable = model.getOntClass(NAMESPACE.VARIABLE);
+    this.receiving = model.getOntClass(NAMESPACE.RECEIVING);
+    this.plan = model.getOntClass(NAMESPACE.PLAN);
+    this.type = model.getDatatypeProperty(NAMESPACE.TYPE);
+    this.system = model.getOntClass(NAMESPACE.SYSTEM);
+    this.hasInputVar = model.getObjectProperty(NAMESPACE.HASINPUTVAR);
+    this.hasOutputVar = model.getObjectProperty(NAMESPACE.HASOUTPUTVAR);
+    this.isPreceededBy = model.getObjectProperty(NAMESPACE.ISPRECEDEDBY);
+    this.includesPlanElement = model.getObjectProperty(NAMESPACE.INCLUDESPLANELEMENT);
+    this.hasServiceGenerator = model.getObjectProperty(NAMESPACE.HASSERVICEGENERATOR);
+    this.hasPlan = model.getObjectProperty(NAMESPACE.HASPLAN);
   }
   public void knimeToPplan() {
     JSONArray nodes = jsonObject.getJSONObject("workflow").getJSONArray("nodes");
@@ -86,13 +87,13 @@ public class Transformer {
   private void processPlanNode(JSONObject node) {
 
     String label = node.getString("annotation");
-    Individual Iplan = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/plan#" + label);
+    Individual Iplan = model.getIndividual(NAMESPACE.AUDITPLAN + label);
     if (Iplan == null) {
-      Iplan = plan.createIndividual("https://w3id.org/semsys/plan/ns/audit/plan#" + label);
+      Iplan = plan.createIndividual(NAMESPACE.AUDITPLAN + label);
     }
 
     Iplan.addProperty(RDFS.label, label);
-    Individual Isystem = system.createIndividual("https://w3id.org/semsys/plan/ns/audit/system#"
+    Individual Isystem = system.createIndividual(NAMESPACE.AUDITSYSTEM
             + node.getJSONArray("settings").getJSONObject(1).getString("value"));
     Isystem.addProperty(RDFS.label, node.getJSONArray("settings").getJSONObject(1).getString("value"));
     setOutput(node, Iplan);
@@ -105,27 +106,27 @@ public class Transformer {
       if (subNode.getString("name").equals("Variable") &&
               subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
         String label = node.getString("annotation");
-        Individual Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+        Individual Ivariable = model.getIndividual(NAMESPACE.AUDITVARIABLE + label);
         if (Ivariable == null) {
-          Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+          Ivariable = variable.createIndividual(NAMESPACE.AUDITVARIABLE + label);
         }
-        model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
-        OntClass variableNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+        model.createClass(NAMESPACE.AUDIT + label);
+        OntClass variableNew = model.getOntClass(NAMESPACE.AUDIT + label);
         entity.addSubClass(variableNew);
         setOutput(node, Ivariable);
         setInput(node, Ivariable);
       } else if (subNode.getString("name").equals("Step") &&
               subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
         String label = node.getString("annotation");
-        Individual Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
+        Individual Istep = model.getIndividual(NAMESPACE.AUDITSTEP + label);
         if (Istep == null) {
-          Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
+          Istep = step.createIndividual(NAMESPACE.AUDITSTEP + label);
         }
         Istep.addProperty(RDFS.label, label);
-        model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
-        OntClass stepNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+        model.createClass(NAMESPACE.AUDIT + label);
+        OntClass stepNew = model.getOntClass(NAMESPACE.AUDIT + label);
         activity.addSubClass(stepNew);
-        Individual receive = receiving.createIndividual("http://w3id.org/wellfort/prov#" + label);
+        Individual receive = receiving.createIndividual(NAMESPACE.WPROV + label);
         receive.addProperty(RDFS.label, label);
         receive.addProperty(type, "JSON");
         setInput(node, Istep);
@@ -135,13 +136,13 @@ public class Transformer {
   }
   private void processVariableNode(JSONObject node) {
     String label = node.getString("annotation");
-    Individual Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+    Individual Ivariable = model.getIndividual(NAMESPACE.AUDITVARIABLE + label);
     if (Ivariable == null) {
-      Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+      Ivariable = variable.createIndividual(NAMESPACE.AUDITVARIABLE + label);
     }
     Ivariable.addProperty(RDFS.label, label);
-    model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
-    OntClass variableNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+    model.createClass(NAMESPACE.AUDIT + label);
+    OntClass variableNew = model.getOntClass(NAMESPACE.AUDIT + label);
     entity.addSubClass(variableNew);
     setOutput(node, Ivariable);
     setInput(node, Ivariable);
@@ -149,15 +150,15 @@ public class Transformer {
 
   private void processStepNode(JSONObject node) {
     String label = node.getString("annotation");
-    Individual Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
+    Individual Istep = model.getIndividual(NAMESPACE.AUDITSTEP + label);
     if (Istep == null) {
-      Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#" + label);
+      Istep = step.createIndividual(NAMESPACE.AUDITSTEP + label);
     }
     Istep.addProperty(RDFS.label, label);
-    model.createClass("https://w3id.org/semsys/plan/ns/audit#" + label);
-    OntClass stepNew = model.getOntClass("https://w3id.org/semsys/plan/ns/audit#" + label);
+    model.createClass(NAMESPACE.AUDIT + label);
+    OntClass stepNew = model.getOntClass(NAMESPACE.AUDIT + label);
     activity.addSubClass(stepNew);
-    Individual receive = receiving.createIndividual("https://w3id.org/semsys/plan/ns/audit/receiving#" + label);
+    Individual receive = receiving.createIndividual(NAMESPACE.AUDITRECEIVING + label);
     receive.addProperty(RDFS.label, label);
     receive.addProperty(type, "JSON");
     setInput(node, Istep);
@@ -192,18 +193,18 @@ public class Transformer {
 
                     Individual Istep;
                     Individual Ireceive;
-                    if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
-                      Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                      Ireceive = receiving.createIndividual("http://w3id.org/wellfort/prov#" + label);
+                    if (model.getIndividual(NAMESPACE.AUDITSTEP + label) == null) {
+                      Istep = step.createIndividual(NAMESPACE.AUDITSTEP + label);
+                      Ireceive = receiving.createIndividual(NAMESPACE.WPROV + label);
                     } else {
-                      Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                      Ireceive = model.getIndividual("http://w3id.org/wellfort/prov#" + label);
+                      Istep = model.getIndividual(NAMESPACE.AUDITSTEP + label);
+                      Ireceive = model.getIndividual(NAMESPACE.WPROV + label);
                     }
                     if (individual.getOntClass().equals(variable)) {
                       Istep.addProperty(this.hasInputVar, individual);
                     } else if (individual.getOntClass().equals(plan)) {
                       individual.addProperty(this.includesPlanElement, Istep);
-                      Individual Isystem = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/system#"
+                      Individual Isystem = model.getIndividual(NAMESPACE.AUDITSYSTEM
                               + node.getJSONArray("settings").getJSONObject(1).getString("value"));
                       Isystem.addProperty(this.hasPlan, individual);
                       Isystem.addProperty(this.hasServiceGenerator, Ireceive);
@@ -216,18 +217,18 @@ public class Transformer {
 
                 Individual Istep;
                 Individual Ireceive;
-                if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
-                  Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                  Ireceive = receiving.createIndividual("http://w3id.org/wellfort/prov#" + label);
+                if (model.getIndividual(NAMESPACE.AUDITSTEP + label) == null) {
+                  Istep = step.createIndividual(NAMESPACE.AUDITSTEP + label);
+                  Ireceive = receiving.createIndividual(NAMESPACE.WPROV + label);
                 } else {
-                  Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
-                  Ireceive = model.getIndividual("http://w3id.org/wellfort/prov#" + label);
+                  Istep = model.getIndividual(NAMESPACE.AUDITSTEP + label);
+                  Ireceive = model.getIndividual(NAMESPACE.WPROV + label);
                 }
                 if (individual.getOntClass().equals(variable)) {
                   Istep.addProperty(this.hasInputVar, individual);
                 } else if (individual.getOntClass().equals(plan)) {
                   individual.addProperty(this.includesPlanElement, Istep);
-                  Individual Isystem = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/system#"
+                  Individual Isystem = model.getIndividual(NAMESPACE.AUDITSYSTEM
                           + node.getJSONArray("settings").getJSONObject(1).getString("value"));
                   Isystem.addProperty(this.hasPlan, individual);
                   Isystem.addProperty(this.hasServiceGenerator, Ireceive);
@@ -256,10 +257,10 @@ public class Transformer {
                       && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
                 String label = node1.getString("annotation");
                 Individual Ivariable = null;
-                if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label) == null) {
-                  Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+                if (model.getIndividual(NAMESPACE.AUDITVARIABLE + label) == null) {
+                  Ivariable = variable.createIndividual(NAMESPACE.AUDITVARIABLE + label);
                 } else {
-                  Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+                  Ivariable = model.getIndividual(NAMESPACE.AUDITVARIABLE + label);
                 }
                 individual.addProperty(this.hasOutputVar, Ivariable);
               } else if (node1.getString("type").equals("Subnode")) {
@@ -271,10 +272,10 @@ public class Transformer {
                           subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.variable.VariableNodeFactory")) {
                     String label = node1.getString("annotation");
                     Individual Ivariable = null;
-                    if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label) == null) {
-                      Ivariable = variable.createIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+                    if (model.getIndividual(NAMESPACE.AUDITVARIABLE + label) == null) {
+                      Ivariable = variable.createIndividual(NAMESPACE.AUDITVARIABLE + label);
                     } else {
-                      Ivariable = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/variable#" + label);
+                      Ivariable = model.getIndividual(NAMESPACE.AUDITVARIABLE + label);
                     }
                     individual.addProperty(this.hasOutputVar, Ivariable);
 
@@ -282,10 +283,10 @@ public class Transformer {
                           subNode.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
                     Individual Istep = null;
                     String label = node1.getString("annotation");
-                    if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
-                      Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                    if (model.getIndividual(NAMESPACE.AUDITSTEP + label) == null) {
+                      Istep = step.createIndividual(NAMESPACE.AUDITSTEP + label);
                     } else {
-                      Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                      Istep = model.getIndividual(NAMESPACE.AUDITSTEP + label);
                     }
                     if (individual.getOntClass().equals(step)) {
                       individual.addProperty(this.isPreceededBy, Istep);
@@ -296,10 +297,10 @@ public class Transformer {
                       && node1.getJSONObject("factoryKey").getString("className").equals("org.pplan.step.StepNodeFactory")) {
                 Individual Istep = null;
                 String label = node1.getString("annotation");
-                if (model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label) == null) {
-                  Istep = step.createIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                if (model.getIndividual(NAMESPACE.AUDITSTEP + label) == null) {
+                  Istep = step.createIndividual(NAMESPACE.AUDITSTEP + label);
                 } else {
-                  Istep = model.getIndividual("https://w3id.org/semsys/plan/ns/audit/step#"+label);
+                  Istep = model.getIndividual(NAMESPACE.AUDITSTEP + label);
                 }
                 if (individual.getOntClass().equals(step)) {
                   individual.addProperty(this.isPreceededBy, Istep);
