@@ -28,7 +28,7 @@ public class Main {
         transformer.save();
     }
 }
-
+```
 ## Note
 1. p-plan.ttl should be in src/main/resources/.
 2. Adaptation might be required for different JSON structures or ontologies.
